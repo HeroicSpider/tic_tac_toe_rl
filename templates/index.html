@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tic-Tac-Toe with Q Learning</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        #board { display: inline-block; }
+        .cell {
+            width: 60px; height: 60px; border: 1px solid #000; display: inline-block;
+            font-size: 48px; line-height: 60px; cursor: pointer; text-align: center;
+        }
+        #message { margin-top: 20px; }
+        #score { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Human vs Q Learning</h1>
+    <div id="score">Player: 0 | AI: 0 | Draws: 0</div>
+    <div id="board"></div>
+    <div id="message"></div>
+    <button onclick="resetGame()">Reset Game</button>
+
+    <script>
+        let board = [];
+        let playerScore = 0;
+        let aiScore = 0;
+        let draws = 0;
+        let gameOver = false;
+
+        function createBoard() {
+            const boardDiv = document.getElementById('board');
+            boardDiv.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.id = `${i}-${j}`;
+                    cell.onclick = () => playerMove(i, j);
+                    boardDiv.appendChild(cell);
+                }
+                boardDiv.appendChild(document.createElement('br'));
+            }
+        }
+
+        function updateBoard() {
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    const cell = document.getElementById(`${i}-${j}`);
+                    const value = board[i][j];
+                    cell.textContent = value === 1 ? 'X' : value === -1 ? 'O' : '';
+                }
+            }
+        }
+
+        function playerMove(i, j) {
+            if (gameOver) {
+                return; // Do not allow any moves if the game is over
+            }
+
+            fetch('/move', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ position: [i, j], player: 1 })
+            })
+            .then(response => response.json())
+            .then(data => {
+                board = data.board;
+                updateBoard();
+                document.getElementById('message').textContent = data.message;
+                if (data.status !== 'continue') {
+                    updateScore(data.status);
+                    gameOver = true; // Set gameOver to true when the game ends
+                }
+            });
+        }
+
+        function resetGame() {
+            fetch('/reset', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                board = data.board;
+                updateBoard();
+                document.getElementById('message').textContent = data.message;
+                gameOver = false; // Set gameOver to false when the game is reset
+            });
+        }
+
+        function updateScore(status) {
+            if (status === 'win') playerScore++;
+            else if (status === 'lose') aiScore++;
+            else if (status === 'draw') draws++;
+            document.getElementById('score').textContent = `Player: ${playerScore} | AI: ${aiScore} | Draws: ${draws}`;
+        }
+
+        // Initialize the game
+        resetGame();
+        createBoard();
+    </script>
+</body>
+</html>
